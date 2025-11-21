@@ -1,0 +1,15 @@
+id: default
+groups: {}
+comments: []
+routes:
+  - id: default
+    name: AI Chat Observability
+    final: true
+    disabled: false
+    pipeline: ai_chat_enrichment
+    description: ""
+    enableOutputExpression: false
+    outputExpression: null
+    filter: "true"
+    clones: []
+    output: default
