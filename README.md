@@ -1,6 +1,6 @@
-# AI System Pack
+# AI System Observability Pack
 
-The AI System Pack enables you to monitor and optimize your AI deployments using your existing observability infrastructure. Track costs, measure quality, and improve user experience across all your AI conversations.
+The AI System Observability Pack enables you to monitor and optimize your AI deployments using your existing observability infrastructure. Track costs, measure quality, and improve user experience across all your AI conversations.
 
 This Pack enriches AI conversation logs with real-time analytics: cost tracking across 16+ models, quality grading (A-D), sentiment analysis, intent detection, and optimization recommendations. All processing happens in-stream with zero external API calls and zero latency impact.
 
