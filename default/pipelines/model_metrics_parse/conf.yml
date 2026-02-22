@@ -1,0 +1,68 @@
+streamtags:
+  - cpe
+functions:
+  - id: serde
+    filter: "true"
+    conf:
+      mode: extract
+      type: json
+      srcField: _raw
+      overwrite: false
+    description: Parse the _raw field from stringified JSON into event fields
+  - id: eval
+    filter: "true"
+    conf:
+      add: []
+      keep:
+        - model
+        - request_time
+        - status
+        - remote_addr
+        - __inputId
+      remove:
+        - "*"
+    description: Create empty unmapped object and retain only required metric fields
+  - id: aggregation
+    filter: "true"
+    disabled: false
+    conf:
+      passthrough: false
+      preserveGroupBys: false
+      sufficientStatsOnly: false
+      metricsMode: false
+      timeWindow: 60s
+      aggregations:
+        - count().as(event_count)
+        - avg(request_time).as(avg_request_time)
+      cumulative: false
+      shouldTreatDotsAsLiterals: false
+      flushOnInputClose: true
+      groupByFields:
+        - model
+        - status
+        - remote_addr
+      groupbys:
+        - model
+        - __inputId
+      add:
+        - name: __inputId
+          value: __inputId
+    description: Aggregate logs to metrics for model performance
+  - id: publish_metrics
+    filter: "true"
+    conf:
+      overwrite: false
+      dimensions:
+        - "!_*"
+        - "*"
+      removeMetrics: []
+      removeDimensions: []
+      fields:
+        - metricType: gauge
+          inFieldName: avg_request_time
+          outFieldExpr: avg_request_time
+  - id: drop
+    filter: model != "mistral:7b"
+    disabled: true
+    conf: {}
+groups: {}

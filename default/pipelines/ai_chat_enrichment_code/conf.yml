@@ -3,9 +3,15 @@ streamtags: []
 groups: {}
 asyncFuncTimeout: 1000
 functions:
-  - id: code
+  - id: serde
     filter: "true"
-    disabled: null
+    conf:
+      mode: extract
+      type: json
+      srcField: _raw
+  - id: code
+    filter: user.message
+    disabled: false
     conf:
       maxNumOfIterations: 5000
       activeLogSampleRate: 1

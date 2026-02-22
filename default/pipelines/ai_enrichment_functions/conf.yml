@@ -1,0 +1,751 @@
+output: default
+streamtags: []
+groups: {}
+asyncFuncTimeout: 1000
+functions:
+  - id: eval
+    filter: body && body.includes('claude_code')
+    conf:
+      add:
+        - disabled: false
+          name: event_name
+          value: (attributes || {})['event.name'] || ''
+        - disabled: false
+          name: otel_event_type
+          value: body || ''
+        - disabled: false
+          name: event_timestamp
+          value: (attributes || {})['event.timestamp'] || ''
+        - disabled: false
+          name: user_id
+          value: (attributes || {})['user.id'] || ''
+        - disabled: false
+          name: user_email
+          value: (attributes || {})['user.email'] || ''
+        - disabled: false
+          name: session_id
+          value: (attributes || {})['session.id'] || ''
+        - disabled: false
+          name: organization_id
+          value: (attributes || {})['organization.id'] || ''
+        - disabled: false
+          name: account_uuid
+          value: (attributes || {})['user.account_uuid'] || ''
+        - disabled: false
+          name: terminal_type
+          value: (attributes || {})['terminal.type'] || ''
+        - disabled: false
+          name: prompt
+          value: (attributes || {})['prompt'] || ''
+        - disabled: false
+          name: prompt_length
+          value: Number((attributes || {})['prompt_length'] || 0)
+        - disabled: false
+          name: model_raw
+          value: (attributes || {})['model'] || ''
+        - disabled: false
+          name: input_tokens
+          value: Number((attributes || {})['input_tokens'] || 0)
+        - disabled: false
+          name: output_tokens
+          value: Number((attributes || {})['output_tokens'] || 0)
+        - disabled: false
+          name: cache_read_tokens
+          value: Number((attributes || {})['cache_read_tokens'] || 0)
+        - disabled: false
+          name: cache_creation_tokens
+          value: Number((attributes || {})['cache_creation_tokens'] || 0)
+        - disabled: false
+          name: cost_usd
+          value: Number((attributes || {})['cost_usd'] || 0)
+        - disabled: false
+          name: duration_ms
+          value: Number((attributes || {})['duration_ms'] || 0)
+        - disabled: false
+          name: tool_name
+          value: (attributes || {})['tool_name'] || ''
+        - disabled: false
+          name: decision
+          value: (attributes || {})['decision'] || ''
+        - disabled: false
+          name: decision_source
+          value: (attributes || {})['source'] || ''
+        - disabled: false
+          name: _event_category
+          value: "event_name === 'api_request' ? 'api_call' : event_name === 'user_prompt'
+            ? 'user_input' : event_name === 'tool_decision' ? 'tool_use' :
+            event_name === 'tool_result' ? 'tool_result' : 'other'"
+        - disabled: false
+          name: request_time
+          value: "duration_ms > 0 ? duration_ms / 1000 : 0"
+        - disabled: false
+          name: streaming
+          value: "event_name === 'api_request' ? true : undefined"
+        - disabled: false
+          name: timestamp
+          value: event_timestamp || ''
+        - disabled: false
+          name: tags
+          value: "['claude_code', 'cc_' + (event_name || 'unknown')]"
+        - disabled: false
+          name: ai_source
+          value: "'claude_code'"
+      remove:
+        - attributes
+        - body
+        - schema_url
+        - dropped_attributes_count
+        - time_unix_nano
+        - observed_time_unix_nano
+    description: "Step 1a: Claude Code OTEL Flatten"
+  - id: eval
+    filter: otel_event_type && otel_event_type.includes('claude_code')
+    conf:
+      add:
+        - disabled: false
+          name: model
+          value: "model_raw.toLowerCase().includes('haiku') && (model_raw.includes('4-5')
+            || model_raw.includes('4.5')) ? 'claude-haiku-4.5' :
+            model_raw.toLowerCase().includes('haiku') &&
+            (model_raw.includes('3-5') || model_raw.includes('3.5')) ?
+            'claude-haiku-3.5' : model_raw.toLowerCase().includes('sonnet') &&
+            (model_raw.includes('4-5') || model_raw.includes('4.5')) ?
+            'claude-sonnet-4.5' : model_raw.toLowerCase().includes('sonnet') &&
+            model_raw.includes('4') ? 'claude-sonnet-4' :
+            model_raw.toLowerCase().includes('opus') ? 'claude-opus-4.1' :
+            model_raw.toLowerCase().includes('gpt-4-turbo') ? 'gpt-4-turbo' :
+            model_raw.toLowerCase().includes('gpt-4') ? 'gpt-4' :
+            model_raw.toLowerCase().includes('gpt-3') ? 'gpt-3.5-turbo' :
+            'default'"
+        - disabled: false
+          name: user_message
+          value: "event_name === 'user_prompt' ? (prompt || '') : ''"
+        - disabled: false
+          name: assistant_message
+          value: "event_name === 'tool_decision' ? 'Tool: ' + (tool_name || '') + ' |
+            Decision: ' + (decision || '') : event_name === 'tool_result' ?
+            'Tool result: ' + (tool_name || '') : ''"
+    description: "Step 1b: Claude Code Normalize"
+  - id: eval
+    filter: _raw && typeof _raw === 'string' && !ai_source
+    conf:
+      add:
+        - disabled: false
+          name: _parsed
+          value: JSON.parse(_raw)
+        - disabled: false
+          name: user_message
+          value: (_parsed.user && _parsed.user.message) || ''
+        - disabled: false
+          name: assistant_message
+          value: (_parsed.assistant && _parsed.assistant.message) || ''
+        - disabled: false
+          name: model
+          value: _parsed.model || 'default'
+        - disabled: false
+          name: request_time
+          value: _parsed.request_time || 0
+        - disabled: false
+          name: streaming
+          value: _parsed.streaming || false
+        - disabled: false
+          name: status
+          value: _parsed.status || 200
+        - disabled: false
+          name: timestamp
+          value: _parsed.timestamp || ''
+        - disabled: false
+          name: request_id
+          value: _parsed.request_id || ''
+        - disabled: false
+          name: remote_addr
+          value: _parsed.remote_addr || ''
+        - disabled: false
+          name: conversation_type
+          value: _parsed.conversation_type || ''
+        - disabled: false
+          name: user_role
+          value: (_parsed.user && _parsed.user.role) || ''
+        - disabled: false
+          name: assistant_role
+          value: (_parsed.assistant && _parsed.assistant.role) || ''
+        - disabled: false
+          name: _event_category
+          value: "'conversation'"
+        - disabled: false
+          name: ai_source
+          value: "'chatbot'"
+        - disabled: false
+          name: tags
+          value: "['ai_chatbot', 'model_' + (_parsed.model || 'unknown')]"
+      remove:
+        - _parsed
+    description: "Step 1c: Chatbot Parse"
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - disabled: false
+          name: user_tokens
+          value: "user_message ? Math.ceil(user_message.trim().split(/\\s+/).length * 1.3
+            + (user_message.match(/[.,!?;:]/g) || []).length * 0.3) :
+            (input_tokens || 0)"
+        - disabled: false
+          name: assistant_tokens
+          value: "assistant_message ?
+            Math.ceil(assistant_message.trim().split(/\\s+/).length * 1.3 +
+            (assistant_message.match(/[.,!?;:]/g) || []).length * 0.3) :
+            (output_tokens || 0)"
+        - disabled: false
+          name: total_tokens
+          value: (user_tokens || 0) + (assistant_tokens || 0)
+        - disabled: false
+          name: response_time_ms
+          value: (request_time || 0) * 1000
+    description: "Step 2: Token estimation"
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - disabled: false
+          name: length_ratio
+          value: "assistant_message && user_message ? assistant_message.length /
+            Math.max(user_message.length, 1) : 0"
+        - disabled: false
+          name: length_assessment
+          value: "length_ratio < 0.5 ? 'too_short' : length_ratio > 5 ? 'too_long' :
+            'balanced'"
+        - disabled: false
+          name: efficiency_rating
+          value: "total_tokens < 100 ? 'highly_efficient' : total_tokens < 500 ?
+            'efficient' : total_tokens < 1000 ? 'moderate' : 'verbose'"
+        - disabled: false
+          name: performance_rating
+          value: "response_time_ms < 1000 ? 'excellent' : response_time_ms < 3000 ? 'good'
+            : response_time_ms < 5000 ? 'acceptable' : 'slow'"
+        - disabled: false
+          name: message_complexity
+          value: "user_tokens < 10 ? 'simple' : user_tokens < 30 ? 'moderate' : 'complex'"
+        - disabled: false
+          name: engagement_level
+          value: "length_ratio > 2 ? 'high' : length_ratio > 0.5 ? 'medium' : 'low'"
+        - disabled: false
+          name: tokens_per_second
+          value: total_tokens / Math.max(request_time || 1, 1)
+    description: "Step 3: Quality metrics"
+  - id: code
+    filter: user_message
+    disabled: false
+    conf:
+      maxNumOfIterations: 5000
+      activeLogSampleRate: 1
+      useUniqueLogChannel: true
+      code: |-
+        var msg = __e['user_message'] || '';
+        var detectedIntent = 'uncategorized';
+        var intentConfidence = 0;
+
+        var patterns = {
+          'support': /help|issue|problem|error|broken|fix|not working|trouble|support/i,
+          'sales': /buy|purchase|price|cost|plan|subscription|upgrade|trial/i,
+          'technical': /api|integration|code|implement|technical|documentation|sdk/i,
+          'general_info': /what is|how does|explain|tell me about|information/i,
+          'feedback': /feedback|suggestion|improve|love|hate|good|bad/i,
+          'billing': /invoice|payment|charge|refund|billing|credit card/i,
+          'account': /account|login|password|email|profile|settings/i,
+          'feature_request': /feature|would be nice|wish|could you add|request/i
+        };
+
+        var intentKeys = Object.keys(patterns);
+        for (var i = 0; i < intentKeys.length; i++) {
+          var intent = intentKeys[i];
+          var pattern = patterns[intent];
+          if (pattern.test(msg)) {
+            detectedIntent = intent;
+            var matches = msg.match(pattern) || [];
+            intentConfidence = Math.min(matches.length * 25, 100);
+            break;
+          }
+        }
+
+        __e['detected_intent'] = detectedIntent;
+        __e['intent_confidence'] = intentConfidence;
+
+        var posCount = (msg.match(/\b(great|excellent|wonderful|amazing|perfect|love|thank|appreciate)\b/gi) || []).length;
+        var negCount = (msg.match(/\b(terrible|awful|hate|angry|frustrated|disappointed|useless|bad)\b/gi) || []).length;
+        var urgCount = (msg.match(/\b(urgent|asap|immediately|now|emergency|critical)\b/gi) || []).length;
+        var confCount = (msg.match(/\b(confused|don't understand|unclear|what do you mean|lost)\b/gi) || []).length;
+
+        var sentimentScore = posCount - negCount;
+
+        __e['sentiment_positive_count'] = posCount;
+        __e['sentiment_negative_count'] = negCount;
+        __e['sentiment_urgency_count'] = urgCount;
+        __e['sentiment_confusion_count'] = confCount;
+        __e['sentiment_score'] = sentimentScore;
+        __e['sentiment_overall'] = sentimentScore > 1 ? 'positive' : sentimentScore < -1 ? 'negative' : 'neutral';
+        __e['urgency_level'] = urgCount > 0 ? 'urgent' : 'normal';
+        __e['confusion_detected'] = confCount > 0;
+
+        __e['detected_language'] = 'english';
+        if (/\b(hola|gracias|por favor|ayuda)\b/i.test(msg)) __e['detected_language'] = 'spanish';
+        else if (/\b(bonjour|merci|comment)\b/i.test(msg)) __e['detected_language'] = 'french';
+        else if (/\b(hallo|danke|bitte)\b/i.test(msg)) __e['detected_language'] = 'german';
+        else if (/[\u4e00-\u9fa5]/.test(msg)) __e['detected_language'] = 'chinese';
+        else if (/[\u3040-\u309f\u30a0-\u30ff]/.test(msg)) __e['detected_language'] = 'japanese';
+        else if (/[\uac00-\ud7af]/.test(msg)) __e['detected_language'] = 'korean';
+        else if (/[\u0600-\u06ff]/.test(msg)) __e['detected_language'] = 'arabic';
+
+        __e['is_greeting'] = /^(hi|hello|hey|good morning|good afternoon)/i.test(msg);
+        __e['is_farewell'] = /(bye|goodbye|thanks|thank you|see you)/i.test(msg);
+        __e['has_question'] = /\?|^(what|when|where|why|how|can you|could you|would you)/i.test(msg);
+        __e['is_command'] = /^(show|list|find|search|create|delete|update)/i.test(msg);
+        __e['user_sentiment'] = msg.indexOf('!') >= 0 ? 'excited' : /please|sorry|excuse/i.test(msg) ? 'polite' : /hate|angry|frustrated|terrible/i.test(msg) ? 'negative' : 'neutral';
+
+        var stopWords = {'the':1,'is':1,'at':1,'which':1,'on':1,'a':1,'an':1,'and':1,'or':1,'but':1,'in':1,'with':1,'to':1,'for':1,'of':1,'as':1,'by':1,'that':1,'this':1,'it':1,'from':1,'be':1,'are':1,'have':1,'has':1,'had':1,'do':1,'does':1,'did':1,'will':1,'would':1,'could':1,'should':1,'can':1,'i':1,'you':1,'he':1,'she':1,'we':1,'they':1,'me':1,'him':1,'her':1,'us':1,'them':1,'been':1,'being':1,'may':1,'might':1,'must':1};
+        var words = msg.toLowerCase().split(/\s+/);
+        var topics = [];
+        for (var j = 0; j < words.length && topics.length < 5; j++) {
+          if (words[j].length > 3 && !stopWords[words[j]] && !/^\d+$/.test(words[j])) {
+            topics.push(words[j]);
+          }
+        }
+        __e['topic_keywords'] = topics;
+
+        var techTerms = (msg.match(/\b(API|SDK|integration|backend|frontend|database|authentication|deployment)\b/gi) || []).length;
+        var multiQ = (msg.match(/\?/g) || []).length > 1;
+        var hasCodeSnip = /[{}\[\]();=<>]/.test(msg);
+        var longForm = msg.length > 500;
+        var cScore = (techTerms > 0 ? 1 : 0) + (multiQ ? 1 : 0) + (hasCodeSnip ? 1 : 0) + (longForm ? 1 : 0);
+        __e['complexity_level'] = cScore === 0 ? 'basic' : cScore <= 2 ? 'moderate' : 'complex';
+
+        __e['likely_experience'] = __e['is_greeting'] ? 'new_user' : detectedIntent === 'technical' ? 'developer' : detectedIntent === 'sales' ? 'potential_customer' : 'regular_user';
+    description: "Step 4: Intent sentiment language"
+  - id: lookup
+    filter: "true"
+    conf:
+      matchMode: regex
+      matchType: specific
+      reloadPeriodSec: 60
+      addToEvent: false
+      inFields:
+        - eventField: model
+          lookupField: model
+      ignoreCase: false
+      file: model_costs.csv
+      outFields:
+        - lookupField: input_cost_per_1k
+          eventField: input_cost_per_1k
+        - lookupField: output_cost_per_1k
+          eventField: output_cost_per_1k
+    description: "Step 5: Model cost lookup"
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - disabled: false
+          name: input_cost_per_1k
+          value: "model === 'gpt-4' ? 0.03 : model === 'gpt-4-turbo' ? 0.01 : model ===
+            'gpt-3.5-turbo' ? 0.0005 : model === 'gpt-3.5-turbo-16k' ? 0.003 :
+            model === 'claude-opus-4.1' ? 0.015 : model === 'claude-sonnet-4.5'
+            || model === 'claude-sonnet-4' ? 0.003 : model ===
+            'claude-haiku-4.5' || model === 'claude-haiku-3.5' ? 0.0008 : model
+            === 'claude-3-opus' ? 0.015 : model === 'claude-3-sonnet' ? 0.003 :
+            model === 'claude-3-haiku' ? 0.00025 : model === 'claude-2.1' ?
+            0.008 : 0.001"
+        - disabled: false
+          name: output_cost_per_1k
+          value: "model === 'gpt-4' ? 0.06 : model === 'gpt-4-turbo' ? 0.03 : model ===
+            'gpt-3.5-turbo' ? 0.0015 : model === 'gpt-3.5-turbo-16k' ? 0.004 :
+            model === 'claude-opus-4.1' ? 0.075 : model === 'claude-sonnet-4.5'
+            || model === 'claude-sonnet-4' ? 0.015 : model ===
+            'claude-haiku-4.5' || model === 'claude-haiku-3.5' ? 0.004 : model
+            === 'claude-3-opus' ? 0.075 : model === 'claude-3-sonnet' ? 0.015 :
+            model === 'claude-3-haiku' ? 0.00125 : model === 'claude-2.1' ?
+            0.024 : 0.001"
+        - disabled: false
+          name: model_tier
+          value: "(output_cost_per_1k || 0) > 0.01 ? 'premium' : (output_cost_per_1k || 0)
+            > 0.001 ? 'standard' : 'economy'"
+        - disabled: false
+          name: cost_bucket
+          value: "(cost_usd || 0) < 0.001 ? 'micro' : (cost_usd || 0) < 0.01 ? 'small' :
+            (cost_usd || 0) < 0.1 ? 'medium' : 'large'"
+        - disabled: false
+          name: cache_efficiency
+          value: "((input_tokens || 0) + (cache_read_tokens || 0)) > 0 ?
+            (cache_read_tokens || 0) / ((input_tokens || 0) + (cache_read_tokens
+            || 0)) : 0"
+    description: "Step 5b: Cost defaults and classification"
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - disabled: false
+          name: quality_addressed_question
+          value: "has_question && assistant_message && !assistant_message.includes('?') ?
+            10 : has_question && assistant_message &&
+            assistant_message.includes('?') ? -10 : 10"
+        - disabled: false
+          name: quality_appropriate_length
+          value: "length_assessment === 'balanced' ? 20 : 0"
+        - disabled: false
+          name: quality_technical_accuracy
+          value: "detected_intent === 'technical' && (assistant_tokens || 0) > 100 ? 15 :
+            0"
+        - disabled: false
+          name: quality_personalization
+          value: "assistant_message && assistant_message.match(/\\b(you|your)\\b/gi) ? 10
+            : 0"
+        - disabled: false
+          name: quality_actionable
+          value: "assistant_message && assistant_message.match(/\\b(try|click|go
+            to|follow|check)\\b/gi) ? 15 : 0"
+        - disabled: false
+          name: quality_empathy
+          value: "sentiment_overall === 'negative' && assistant_message &&
+            assistant_message.match(/\\b(sorry|understand|apologize|help)\\b/gi)
+            ? 20 : 0"
+        - disabled: false
+          name: response_quality_score
+          value: (quality_addressed_question || 0) + (quality_appropriate_length || 0) +
+            (quality_technical_accuracy || 0) + (quality_personalization || 0) +
+            (quality_actionable || 0) + (quality_empathy || 0)
+        - disabled: false
+          name: response_quality_grade
+          value: "response_quality_score >= 80 ? 'A' : response_quality_score >= 60 ? 'B'
+            : response_quality_score >= 40 ? 'C' : 'D'"
+    description: "Step 6: Response quality scoring"
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - disabled: false
+          name: error_api
+          value: "status && status >= 400 ? true : false"
+        - disabled: false
+          name: error_timeout
+          value: "(response_time_ms || 0) > 30000 ? true : false"
+        - disabled: false
+          name: error_empty_response
+          value: "!assistant_message || assistant_message.trim().length === 0 ? true :
+            false"
+        - disabled: false
+          name: has_error
+          value: error_api || error_timeout || error_empty_response
+        - disabled: false
+          name: success_thanked
+          value: "user_message &&
+            /\\b(thank|thanks|appreciate|helpful|perfect)\\b/i.test(user_messag\
+            e) ? true : false"
+        - disabled: false
+          name: success_answered
+          value: "has_question && assistant_message && !assistant_message.includes('?') ?
+            true : false"
+        - disabled: false
+          name: success_positive
+          value: "sentiment_overall === 'positive' ? true : false"
+        - disabled: false
+          name: success_no_confusion
+          value: "!confusion_detected ? true : false"
+        - disabled: false
+          name: success_score
+          value: "(success_thanked ? 1 : 0) + (success_answered ? 1 : 0) +
+            (success_positive ? 1 : 0) + (success_no_confusion ? 1 : 0)"
+        - disabled: false
+          name: predicted_outcome
+          value: "success_score >= 3 ? 'successful' : success_score >= 1 ?
+            'partial_success' : has_error ? 'failed' : 'uncertain'"
+        - disabled: false
+          name: outcome_confidence
+          value: "success_score > 2 ? 'high' : success_score > 0 ? 'medium' : 'low'"
+    description: "Step 7: Error detection and outcome"
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - disabled: false
+          name: alert_high_cost
+          value: "(cost_usd || 0) > 0.05 ? true : false"
+        - disabled: false
+          name: alert_urgent_slow
+          value: "(sentiment_urgency_count || 0) > 0 && (response_time_ms || 0) > 5000 ?
+            true : false"
+        - disabled: false
+          name: alert_negative_experience
+          value: "sentiment_overall === 'negative' && predicted_outcome !== 'successful' ?
+            true : false"
+        - disabled: false
+          name: has_alerts
+          value: alert_high_cost || alert_urgent_slow || alert_negative_experience
+        - disabled: false
+          name: anomaly_high_latency
+          value: (response_time_ms || 0) > 5000
+        - disabled: false
+          name: anomaly_high_cost
+          value: (cost_usd || 0) > 0.1
+        - disabled: false
+          name: anomaly_excessive_tokens
+          value: (assistant_tokens || 0) > 1000 || (output_tokens || 0) > 1000
+        - disabled: false
+          name: has_anomaly
+          value: anomaly_high_latency || anomaly_high_cost || anomaly_excessive_tokens
+        - disabled: false
+          name: opt_model_downgrade
+          value: "(cost_usd || 0) > 0.01 && model && model.includes('gpt-4') ? true :
+            false"
+        - disabled: false
+          name: opt_response_too_long
+          value: "(assistant_tokens || output_tokens || 0) > 500 ? true : false"
+        - disabled: false
+          name: opt_cache_opportunity
+          value: "detected_intent === 'general_info' || detected_intent === 'support' ?
+            true : false"
+        - disabled: false
+          name: opt_enable_streaming
+          value: "!streaming && (response_time_ms || 0) > 2000 ? true : false"
+        - disabled: false
+          name: has_optimizations
+          value: opt_model_downgrade || opt_response_too_long || opt_cache_opportunity ||
+            opt_enable_streaming
+    description: "Step 8: Alerts anomalies optimizations"
+  - id: eval
+    filter: "true"
+    conf:
+      add:
+        - disabled: false
+          name: roi_estimated_value
+          value: "detected_intent === 'sales' ? 100 : detected_intent === 'support' ? 50 :
+            detected_intent === 'technical' ? 75 : 25"
+        - disabled: false
+          name: roi_profitable
+          value: (roi_estimated_value || 0) > (cost_usd || 0) * 10
+        - disabled: false
+          name: wasted_tokens
+          value: "has_error ? (assistant_tokens || 0) : 0"
+        - disabled: false
+          name: hour_of_day
+          value: "timestamp ? new Date(timestamp).getHours() : new Date().getHours()"
+    description: "Step 9: ROI and value"
+  - id: code
+    filter: "true"
+    disabled: false
+    conf:
+      maxNumOfIterations: 5000
+      activeLogSampleRate: 1
+      useUniqueLogChannel: true
+      code: |-
+        var userTokens = __e['user_tokens'] || 0;
+        var assistantTokens = __e['assistant_tokens'] || 0;
+        var totalTokens = __e['total_tokens'] || 0;
+        var costUsd = __e['cost_usd'] || 0;
+        var model = __e['model'] || 'default';
+        var requestTime = __e['request_time'] || 1;
+        var responseTimeMs = __e['response_time_ms'] || 0;
+        var qScore = __e['response_quality_score'] || 0;
+        var qGrade = __e['response_quality_grade'] || 'D';
+
+        // Costs from Lookup (set by lookup function, falls back to default 0.001)
+        var inputCostPer1k = parseFloat(__e['input_cost_per_1k'] || 0.001);
+        var outputCostPer1k = parseFloat(__e['output_cost_per_1k'] || 0.001);
+
+        var inputCost = (userTokens / 1000) * inputCostPer1k;
+        var outputCost = (assistantTokens / 1000) * outputCostPer1k;
+        var totalCost = inputCost + outputCost;
+        var requestsPerHour = 3600 / Math.max(requestTime, 1);
+        var projectedHourlyCost = totalCost * requestsPerHour;
+        var projectedDailyCost = projectedHourlyCost * 24;
+
+        __e['_cost_analysis'] = {
+          tokens: { input: userTokens, output: assistantTokens, total: totalTokens },
+          cost_usd: {
+            input: parseFloat(inputCost.toFixed(6)),
+            output: parseFloat(outputCost.toFixed(6)),
+            total: parseFloat(totalCost.toFixed(6)),
+            per_token: totalTokens > 0 ? parseFloat((totalCost / totalTokens).toFixed(8)) : 0
+          },
+          projections: {
+            hourly: parseFloat(projectedHourlyCost.toFixed(4)),
+            daily: parseFloat(projectedDailyCost.toFixed(2)),
+            monthly: parseFloat((projectedDailyCost * 30).toFixed(2))
+          },
+          model_tier: __e['model_tier'] || 'economy'
+        };
+
+        var userMsg = __e['user_message'] || '';
+        var assistMsg = __e['assistant_message'] || '';
+        var uWords = userMsg.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(function(w) { return w.length > 0; });
+        var aWords = assistMsg.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(function(w) { return w.length > 0; });
+        var uSet = {};
+        for (var ui = 0; ui < uWords.length; ui++) uSet[uWords[ui]] = true;
+        var common = 0;
+        for (var ai = 0; ai < aWords.length; ai++) { if (uSet[aWords[ai]]) common++; }
+        var relevance = Math.min(Math.round((common / Math.max(uWords.length, 1)) * 100), 100);
+
+        __e['_quality_metrics'] = {
+          relevance_score: relevance,
+          length_assessment: __e['length_assessment'] || 'balanced',
+          efficiency_rating: __e['efficiency_rating'] || 'efficient',
+          performance_rating: __e['performance_rating'] || 'good',
+          response_time_ms: responseTimeMs,
+          tokens_per_second: __e['tokens_per_second'] || 0
+        };
+
+        __e['_conversation_intelligence'] = {
+          detected_intent: __e['detected_intent'] || 'uncategorized',
+          intent_confidence: __e['intent_confidence'] || 0,
+          conversation_patterns: {
+            is_greeting: __e['is_greeting'] || false,
+            is_farewell: __e['is_farewell'] || false,
+            has_question: __e['has_question'] || false,
+            is_command: __e['is_command'] || false,
+            sentiment: __e['user_sentiment'] || 'neutral'
+          },
+          user_behavior: {
+            message_complexity: __e['message_complexity'] || 'simple',
+            likely_experience: __e['likely_experience'] || 'regular_user',
+            engagement_level: __e['engagement_level'] || 'medium'
+          },
+          detected_language: __e['detected_language'] || 'english',
+          complexity_level: __e['complexity_level'] || 'basic',
+          topic_keywords: __e['topic_keywords'] || []
+        };
+
+        __e['_sentiment_analysis'] = {
+          overall: __e['sentiment_overall'] || 'neutral',
+          score: __e['sentiment_score'] || 0,
+          indicators: {
+            positive_indicators: __e['sentiment_positive_count'] || 0,
+            negative_indicators: __e['sentiment_negative_count'] || 0,
+            urgency_indicators: __e['sentiment_urgency_count'] || 0,
+            confusion_indicators: __e['sentiment_confusion_count'] || 0
+          },
+          urgency_level: __e['urgency_level'] || 'normal',
+          confusion_detected: __e['confusion_detected'] || false
+        };
+
+        __e['_response_quality'] = {
+          score: qScore,
+          max_score: 100,
+          quality_factors: {
+            addressed_question: __e['quality_addressed_question'] || 0,
+            appropriate_length: __e['quality_appropriate_length'] || 0,
+            technical_accuracy: __e['quality_technical_accuracy'] || 0,
+            personalization: __e['quality_personalization'] || 0,
+            actionable_response: __e['quality_actionable'] || 0,
+            empathy_shown: __e['quality_empathy'] || 0
+          },
+          grade: qGrade
+        };
+
+        if (__e['has_error']) {
+          var errorTypes = [];
+          if (__e['error_api']) errorTypes.push('api_error');
+          if (__e['error_timeout']) errorTypes.push('timeout_error');
+          if (__e['error_empty_response']) errorTypes.push('empty_response');
+          __e['_error_detection'] = {
+            has_error: true,
+            error_types: errorTypes,
+            error_details: { api_error: __e['error_api'] || false, timeout_error: __e['error_timeout'] || false, empty_response: __e['error_empty_response'] || false }
+          };
+        }
+
+        // Use regex match results directly (null when no match) to match v2
+        var thankedMatch = userMsg.match(/\b(thank|thanks|appreciate|helpful|perfect)\b/i);
+
+        __e['_outcome_prediction'] = {
+          predicted_outcome: __e['predicted_outcome'] || 'uncertain',
+          success_indicators: {
+            thanked: thankedMatch,
+            question_answered: __e['success_answered'] || false,
+            positive_sentiment: __e['success_positive'] || false,
+            no_confusion: __e['success_no_confusion'] || true
+          },
+          success_score: __e['success_score'] || 0,
+          confidence: __e['outcome_confidence'] || 'low'
+        };
+
+        __e['_token_efficiency'] = {
+          compression_ratio: userTokens > 0 ? assistantTokens / userTokens : 0,
+          cost_per_outcome: totalCost / Math.max((__e['success_score'] || 0) + 1, 1),
+          wasted_tokens: __e['wasted_tokens'] || 0,
+          optimal_response_length: userTokens * 2.5,
+          length_variance: Math.abs(assistantTokens - (userTokens * 2.5))
+        };
+
+        __e['_model_performance'] = {
+          response_speed: responseTimeMs < 1000 ? 'fast' : responseTimeMs < 3000 ? 'normal' : 'slow',
+          token_generation_rate: assistantTokens / Math.max(requestTime, 1),
+          cost_efficiency: (qScore / Math.max(totalCost * 1000, 0.001)).toFixed(2),
+          error_rate: __e['has_error'] ? 1 : 0
+        };
+
+        var alerts = [];
+        if (__e['alert_high_cost']) alerts.push({ type: 'high_cost', severity: 'warning', message: 'High cost: $' + totalCost.toFixed(4), threshold: 0.05 });
+        if (__e['alert_urgent_slow']) alerts.push({ type: 'urgent_slow_response', severity: 'critical', message: 'Urgent request with slow response', response_time: responseTimeMs });
+        if (__e['alert_negative_experience']) alerts.push({ type: 'negative_experience', severity: 'high', message: 'Negative sentiment with unsuccessful outcome', action: 'Review conversation' });
+        if (alerts.length > 0) {
+          __e['_alerts'] = alerts;
+          __e['_has_alerts'] = true;
+          __e['tags'] = __e['tags'] || [];
+          for (var k = 0; k < alerts.length; k++) __e['tags'].push('alert_' + alerts[k].type);
+        }
+
+        var opts = [];
+        if (__e['opt_model_downgrade']) opts.push({ type: 'model_downgrade', recommendation: 'Consider using a cheaper model for this query type', potential_savings: '$' + (totalCost * 0.9).toFixed(4) + ' per request' });
+        if (__e['opt_response_too_long']) opts.push({ type: 'response_length', recommendation: 'Response may be unnecessarily verbose', current_tokens: assistantTokens, suggested_tokens: 200 });
+        if (__e['opt_cache_opportunity']) opts.push({ type: 'caching_opportunity', recommendation: 'This appears to be a common query that could be cached', intent: __e['detected_intent'], cache_hit_potential: 'high' });
+        if (__e['opt_enable_streaming']) opts.push({ type: 'enable_streaming', recommendation: 'Enable streaming for better perceived performance', current_wait: responseTimeMs + 'ms', improved_ttfb: '~500ms' });
+        if (opts.length > 0) {
+          __e['_optimization_opportunities'] = opts;
+          __e['_has_optimizations'] = true;
+        }
+
+        __e['_aggregation_keys'] = {
+          model: model,
+          intent: __e['detected_intent'] || 'uncategorized',
+          efficiency: __e['efficiency_rating'] || 'efficient',
+          cost_bucket: __e['cost_bucket'] || 'micro',
+          hour_of_day: __e['hour_of_day'] || 0,
+          language: __e['detected_language'] || 'english',
+          sentiment: __e['sentiment_overall'] || 'neutral',
+          outcome: __e['predicted_outcome'] || 'uncertain',
+          quality_grade: qGrade,
+          complexity: __e['complexity_level'] || 'basic',
+          has_errors: __e['has_error'] || false
+        };
+
+        if (__e['has_anomaly']) {
+          __e['_anomaly_flags'] = {
+            high_latency: __e['anomaly_high_latency'] || false,
+            high_cost: __e['anomaly_high_cost'] || false,
+            excessive_tokens: __e['anomaly_excessive_tokens'] || false,
+            severity: 'investigate'
+          };
+          __e['tags'] = __e['tags'] || [];
+          __e['tags'].push('performance_anomaly');
+        }
+
+        var valueScore = (relevance * 0.2) + (__e['length_assessment'] === 'balanced' ? 15 : 5) + (__e['efficiency_rating'] === 'efficient' || __e['efficiency_rating'] === 'highly_efficient' ? 15 : 5) + (__e['performance_rating'] === 'excellent' || __e['performance_rating'] === 'good' ? 15 : 5) + (qScore * 0.3) + (__e['predicted_outcome'] === 'successful' ? 15 : __e['predicted_outcome'] === 'partial_success' ? 8 : 0);
+        __e['_conversation_value_score'] = Math.round(Math.min(valueScore, 100));
+
+        __e['_roi_analysis'] = {
+          estimated_value_usd: __e['roi_estimated_value'] || 25,
+          cost_usd: totalCost,
+          roi_ratio: parseFloat(((__e['roi_estimated_value'] || 25) / Math.max(totalCost, 0.001)).toFixed(2)),
+          profitable: __e['roi_profitable'] || false
+        };
+
+        __e['_conversation_summary'] = (__e['detected_intent'] || 'unknown').toUpperCase() + ' | ' + model + ' | ' + (__e['sentiment_overall'] || 'neutral') + ' sentiment | ' + (__e['predicted_outcome'] || 'uncertain') + ' outcome | ' + totalCost.toFixed(4) + ' | ' + totalTokens + ' tokens | Grade: ' + qGrade;
+
+        __e['_processing_metadata'] = {
+          function_version: '3.0',
+          processed_at: new Date().toISOString(),
+          processing_time_ms: 0
+        };
+
+        // Cleanup lookup fields
+        delete __e['input_cost_per_1k'];
+        delete __e['output_cost_per_1k'];
+    description: "Step 10: Build nested objects"
+description: AI log normalization pipeline - multi-source with lookup-driven cost model
