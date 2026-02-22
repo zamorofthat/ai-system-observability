@@ -1,0 +1,160 @@
+output: default
+streamtags: []
+groups: {}
+asyncFuncTimeout: 1000
+functions:
+  - id: eval
+    filter: body && body.includes('claude_code')
+    conf:
+      add:
+        - disabled: false
+          name: event_name
+          value: (attributes || {})['event.name'] || ''
+        - disabled: false
+          name: otel_event_type
+          value: body || ''
+        - disabled: false
+          name: event_timestamp
+          value: (attributes || {})['event.timestamp'] || ''
+        - disabled: false
+          name: user_id
+          value: (attributes || {})['user.id'] || ''
+        - disabled: false
+          name: user_email
+          value: (attributes || {})['user.email'] || ''
+        - disabled: false
+          name: session_id
+          value: (attributes || {})['session.id'] || ''
+        - disabled: false
+          name: organization_id
+          value: (attributes || {})['organization.id'] || ''
+        - disabled: false
+          name: account_uuid
+          value: (attributes || {})['user.account_uuid'] || ''
+        - disabled: false
+          name: terminal_type
+          value: (attributes || {})['terminal.type'] || ''
+        - disabled: false
+          name: prompt
+          value: (attributes || {})['prompt'] || ''
+        - disabled: false
+          name: prompt_length
+          value: Number((attributes || {})['prompt_length'] || 0)
+        - disabled: false
+          name: model_raw
+          value: (attributes || {})['model'] || ''
+        - disabled: false
+          name: input_tokens
+          value: Number((attributes || {})['input_tokens'] || 0)
+        - disabled: false
+          name: output_tokens
+          value: Number((attributes || {})['output_tokens'] || 0)
+        - disabled: false
+          name: cache_read_tokens
+          value: Number((attributes || {})['cache_read_tokens'] || 0)
+        - disabled: false
+          name: cache_creation_tokens
+          value: Number((attributes || {})['cache_creation_tokens'] || 0)
+        - disabled: false
+          name: cost_usd
+          value: Number((attributes || {})['cost_usd'] || 0)
+        - disabled: false
+          name: duration_ms
+          value: Number((attributes || {})['duration_ms'] || 0)
+        - disabled: false
+          name: tool_name
+          value: (attributes || {})['tool_name'] || ''
+        - disabled: false
+          name: decision
+          value: (attributes || {})['decision'] || ''
+        - disabled: false
+          name: decision_source
+          value: (attributes || {})['source'] || ''
+        - disabled: false
+          name: host_arch
+          value: ((resource || {}).attributes || {})['host.arch'] || ''
+        - disabled: false
+          name: os_type
+          value: ((resource || {}).attributes || {})['os.type'] || ''
+        - disabled: false
+          name: os_version
+          value: ((resource || {}).attributes || {})['os.version'] || ''
+        - disabled: false
+          name: service_name
+          value: ((resource || {}).attributes || {})['service.name'] || ''
+        - disabled: false
+          name: service_version
+          value: ((resource || {}).attributes || {})['service.version'] || ''
+        - disabled: false
+          name: scope_name
+          value: ((scope || {}).name) || ''
+        - disabled: false
+          name: scope_version
+          value: ((scope || {}).version) || ''
+        - disabled: false
+          name: _event_category
+          value: "event_name === 'api_request' ? 'api_call' : event_name === 'user_prompt'
+            ? 'user_input' : event_name === 'tool_decision' ? 'tool_use' :
+            event_name === 'tool_result' ? 'tool_result' : 'other'"
+        - disabled: false
+          name: request_time
+          value: "duration_ms > 0 ? duration_ms / 1000 : 0"
+        - disabled: false
+          name: streaming
+          value: "event_name === 'api_request' ? true : undefined"
+        - disabled: false
+          name: timestamp
+          value: event_timestamp || ''
+        - disabled: false
+          name: tags
+          value: "['claude_code', 'cc_' + (event_name || 'unknown')]"
+        - disabled: false
+          name: ai_source
+          value: "'claude_code'"
+      remove:
+        - attributes
+        - resource
+        - scope
+        - body
+        - schema_url
+        - dropped_attributes_count
+        - time_unix_nano
+        - observed_time_unix_nano
+    description: "Claude Code OTEL: Flatten nested structure to top-level fields"
+  - id: eval
+    filter: otel_event_type && otel_event_type.includes('claude_code')
+    conf:
+      add:
+        - disabled: false
+          name: model
+          value: "model_raw.toLowerCase().includes('haiku') && (model_raw.includes('4-5')
+            || model_raw.includes('4.5')) ? 'claude-haiku-4.5' :
+            model_raw.toLowerCase().includes('haiku') &&
+            (model_raw.includes('3-5') || model_raw.includes('3.5')) ?
+            'claude-haiku-3.5' : model_raw.toLowerCase().includes('sonnet') &&
+            (model_raw.includes('4-5') || model_raw.includes('4.5')) ?
+            'claude-sonnet-4.5' : model_raw.toLowerCase().includes('sonnet') &&
+            model_raw.includes('4') ? 'claude-sonnet-4' :
+            model_raw.toLowerCase().includes('opus') ? 'claude-opus-4.1' :
+            model_raw.toLowerCase().includes('gpt-4-turbo') ? 'gpt-4-turbo' :
+            model_raw.toLowerCase().includes('gpt-4') ? 'gpt-4' :
+            model_raw.toLowerCase().includes('gpt-3') ? 'gpt-3.5-turbo' :
+            'default'"
+        - disabled: false
+          name: user
+          value: "{ message: event_name === 'user_prompt' ? (prompt || '') : '' }"
+        - disabled: false
+          name: assistant
+          value: "{ message: event_name === 'tool_decision' ? 'Tool: ' + (tool_name || '')
+            + ' | Decision: ' + (decision || '') : event_name === 'tool_result'
+            ? 'Tool result: ' + (tool_name || '') : '' }"
+        - disabled: false
+          name: _raw
+          value: "JSON.stringify({ user: { message: event_name === 'user_prompt' ? (prompt
+            || '') : '' }, assistant: { message: event_name === 'tool_decision'
+            ? 'Tool: ' + (tool_name || '') + ' | Decision: ' + (decision || '')
+            : '' }, model: model, request_time: request_time || 0, streaming:
+            streaming || false, timestamp: timestamp || '', status: 200 })"
+    description: "Claude Code: Build user/assistant objects, normalize model, rebuild _raw"
+description: AI log normalization pipeline — normalizes logs from various AI
+  tools (Claude Code, etc.) into a common schema for the AI Analytics function

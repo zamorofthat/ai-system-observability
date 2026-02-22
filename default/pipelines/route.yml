@@ -2,14 +2,35 @@ id: default
 groups: {}
 comments: []
 routes:
+  - id: KtoeDz
+    name: Claude Code
+    final: false
+    disabled: false
+    pipeline: claude_code_otel_normalizer
+    description: ""
+    enableOutputExpression: false
+    filter: body.includes("claude_code")
+    clones:
+      - {}
+    output: default
+  - id: ZghWHF
+    name: AI normalization route
+    final: false
+    disabled: false
+    pipeline: ai_normalization_pipeline
+    description: ""
+    enableOutputExpression: false
+    filter: "true"
+    clones:
+      - {}
+    output: default
   - id: default
     name: AI Chat Observability
     final: true
     disabled: false
-    pipeline: ai_chat_enrichment
+    pipeline: ai_enrichment_functions
     description: ""
     enableOutputExpression: false
-    outputExpression: null
     filter: "true"
     clones: []
     output: default
