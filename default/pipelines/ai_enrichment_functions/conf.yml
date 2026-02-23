@@ -3,6 +3,16 @@ streamtags: []
 groups: {}
 asyncFuncTimeout: 1000
 functions:
+  - id: comment
+    filter: "true"
+    disabled: false
+    conf:
+      comment: >-
+        AI Enrichment Functions Pipeline: Enriches normalized AI conversation logs with
+        comprehensive analytics including cost calculation, quality grading (A-D), sentiment
+        analysis, intent detection, and optimization recommendations. Supports multiple AI
+        sources (Claude Code, chatbots) and outputs 15+ enriched fields per event.
+    description: Pipeline overview
   - id: eval
     filter: body && body.includes('claude_code')
     conf:

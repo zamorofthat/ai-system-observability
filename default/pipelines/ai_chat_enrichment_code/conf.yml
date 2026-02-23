@@ -3,12 +3,23 @@ streamtags: []
 groups: {}
 asyncFuncTimeout: 1000
 functions:
+  - id: comment
+    filter: "true"
+    disabled: false
+    conf:
+      comment: >-
+        AI Chat Enrichment Code Pipeline: Processes pre-parsed AI conversation events.
+        Extracts user/assistant messages via SERDE, then applies comprehensive analytics
+        including cost tracking, quality grading, sentiment analysis, and optimization
+        recommendations.
+    description: Pipeline overview
   - id: serde
     filter: "true"
     conf:
       mode: extract
       type: json
       srcField: _raw
+    description: Parse JSON from _raw field to extract user and assistant message objects
   - id: code
     filter: user.message
     disabled: false

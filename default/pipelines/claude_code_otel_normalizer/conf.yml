@@ -3,6 +3,16 @@ streamtags: []
 groups: {}
 asyncFuncTimeout: 1000
 functions:
+  - id: comment
+    filter: "true"
+    disabled: false
+    conf:
+      comment: >-
+        Claude Code OTEL Normalizer: Processes OpenTelemetry logs from Claude Code CLI.
+        Extracts fields from nested OTEL attributes (user.id, session.id, event.name, etc.),
+        flattens resource and scope metadata, and prepares events for the AI normalization
+        pipeline.
+    description: Pipeline overview
   - id: eval
     filter: "true"
     conf:

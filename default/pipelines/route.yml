@@ -3,33 +3,43 @@ groups: {}
 comments: []
 routes:
   - id: KtoeDz
-    name: Claude Code
+    name: claude_code_otel_normalizer
     final: false
     disabled: false
     pipeline: claude_code_otel_normalizer
-    description: ""
+    description: Routes Claude Code OTEL telemetry logs for normalization
     enableOutputExpression: false
-    filter: body.includes("claude_code")
+    filter: body.includes("claude_code") || __inputId.includes('otel')
     clones:
       - {}
     output: default
   - id: ZghWHF
-    name: AI normalization route
+    name: ai_normalization_pipeline
     final: false
     disabled: false
     pipeline: ai_normalization_pipeline
-    description: ""
+    description: Normalizes AI logs from various sources into common schema
     enableOutputExpression: false
-    filter: "true"
+    filter: otel_event_type && otel_event_type.includes('claude_code')
     clones:
       - {}
     output: default
   - id: default
-    name: AI Chat Observability
-    final: true
+    name: ai_enrichment_functions
+    final: false
     disabled: false
     pipeline: ai_enrichment_functions
-    description: ""
+    description: Enriches normalized AI logs with cost, quality, and sentiment analysis
+    enableOutputExpression: false
+    filter: user && assistant && model
+    clones: []
+    output: default
+  - id: defaultRoute
+    name: default
+    final: true
+    disabled: false
+    pipeline: passthru
+    description: Default route for unmatched events
     enableOutputExpression: false
     filter: "true"
     clones: []
