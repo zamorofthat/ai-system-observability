@@ -3,6 +3,16 @@ streamtags: []
 groups: {}
 asyncFuncTimeout: 1000
 functions:
+  - id: comment
+    filter: "true"
+    disabled: false
+    conf:
+      comment: >-
+        AI Normalization Pipeline: Transforms AI telemetry from various sources (Claude Code
+        OTEL, chatbots) into a common schema. Flattens nested OTEL structures, normalizes
+        model names, extracts user/assistant messages, and prepares events for downstream
+        enrichment by the AI Analytics function.
+    description: Pipeline overview
   - id: eval
     filter: body && body.includes('claude_code')
     conf:

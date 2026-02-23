@@ -1,6 +1,16 @@
 streamtags:
   - cpe
 functions:
+  - id: comment
+    filter: "true"
+    disabled: false
+    conf:
+      comment: >-
+        Model Metrics Parse Pipeline: Converts AI conversation logs into aggregated metrics.
+        Parses JSON, retains key metric fields (model, request_time, status), aggregates by
+        model and input source over 60-second windows, and publishes as gauge metrics for
+        monitoring dashboards.
+    description: Pipeline overview
   - id: serde
     filter: "true"
     conf:
@@ -61,8 +71,10 @@ functions:
         - metricType: gauge
           inFieldName: avg_request_time
           outFieldExpr: avg_request_time
+    description: Publish average request time as gauge metric for monitoring
   - id: drop
     filter: model != "mistral:7b"
     disabled: true
     conf: {}
+    description: Optional filter to drop non-Mistral models (disabled by default)
 groups: {}
