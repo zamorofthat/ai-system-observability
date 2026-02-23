@@ -9,7 +9,7 @@ routes:
     pipeline: claude_code_otel_normalizer
     description: Routes Claude Code OTEL telemetry logs for normalization
     enableOutputExpression: false
-    filter: body.includes("claude_code") || __inputId.includes('otel')
+    filter: body.includes("claude_code")
     clones:
       - {}
     output: default
@@ -20,7 +20,7 @@ routes:
     pipeline: ai_normalization_pipeline
     description: Normalizes AI logs from various sources into common schema
     enableOutputExpression: false
-    filter: otel_event_type && otel_event_type.includes('claude_code')
+    filter: cribl_pipe.includes("normalizer")
     clones:
       - {}
     output: default
@@ -31,7 +31,7 @@ routes:
     pipeline: ai_enrichment_functions
     description: Enriches normalized AI logs with cost, quality, and sentiment analysis
     enableOutputExpression: false
-    filter: user && assistant && model
+    filter: _raw.includes("user") && _raw.includes("assistant") && _raw.includes("model")
     clones: []
     output: default
   - id: defaultRoute
